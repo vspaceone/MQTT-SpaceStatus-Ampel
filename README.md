@@ -1,0 +1,1 @@
+# MQTT-SpaceStatus-Ampel
