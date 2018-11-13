@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ESP8266HTTPClient.h>
 
 const char* SSID = "vspace.one";
 const char* PSK = "12345678";
@@ -10,6 +11,30 @@ PubSubClient client(espClient);
 long lastMsg = 0;
 char msg[50];
 int value = 0;
+
+bool telegram(String Message = "[SpaceAmpel_Fehler: Kein Text an Senderoutine]", String Token = "59c3dc1a8b797") {
+  int c;
+  String Send = "";
+  for (int i = 0; i < Message.length(); i++) {
+    c = Message.charAt(i);
+    if ( ('a' <= c && c <= 'z')
+         || ('A' <= c && c <= 'Z')
+         || ('0' <= c && c <= '9') ) {
+      Send += char(c);
+    } else {
+      if (c <= 0x0F) {
+        Send += "%0" + String(c, HEX);
+      } else {
+        Send += "%" + String(c, HEX);
+      }
+    }
+  }
+
+  HTTPClient http;
+  http.begin("http://telegramiotbot.com/api/notify?token=" + Token + "&message=" + Send);
+  int httpCode = http.GET();
+  return httpCode != HTTP_CODE_OK;
+}
 
 void setup() {
   //********** CHANGE PIN FUNCTION  TO GPIO **********
@@ -82,19 +107,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
   msg[length] = '\0';
   //    Serial.println(msg);
 
+  digitalWrite(1, HIGH);
+  delay(5);
+  digitalWrite(1, LOW);
   if (strcmp(msg, "{\"status\":\"ok\",\"data\":{\"open\":true}}") == 0) {
     digitalWrite(0, HIGH);
     digitalWrite(2, LOW);
+    telegram("vspace.one geöffnet");
     //        Serial.println("Offen");
   }
   else if (strcmp(msg, "{\"status\":\"ok\",\"data\":{\"open\":false}}") == 0) {
     digitalWrite(0, LOW);
     digitalWrite(2, HIGH);
+    telegram("vspace.one geschlossen");
     //        Serial.println("Zu");
   }
-  digitalWrite(1, HIGH);
-  delay(5);
-  digitalWrite(1, LOW);
 }
 
 void reconnect() {
